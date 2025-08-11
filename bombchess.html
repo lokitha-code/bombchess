@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💣 Bomb Chess - Easy Version</title>
+    <style>
+        /* Make everything look nice and colorful */
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: white;
+            font-size: 40px;
+            text-shadow: 2px 2px 4px black;
+            margin-bottom: 20px;
+        }
+
+        /* Info boxes at the top */
+        .info-box {
+            display: inline-block;
+            background: white;
+            border: 3px solid #333;
+            border-radius: 15px;
+            padding: 15px;
+            margin: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        .bomb-count {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .white-bombs { color: #0984e3; }
+        .black-bombs { color: #e84393; }
+
+        /* The chess board */
+        .chess-board {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            gap: 2px;
+            margin: 20px auto;
+            border: 4px solid #333;
+            border-radius: 10px;
+            background: #333;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+        /* Each square on the board */
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        /* Light squares (like a real chess board) */
+        .light {
+            background-color: #f0d9b5;
+        }
+
+        /* Dark squares */
+        .dark {
+            background-color: #b58863;
+        }
+
+        /* When you click on a piece */
+        .selected {
+            background-color: #74b9ff !important;
+            box-shadow: inset 0 0 0 4px #0984e3;
+        }
+
+        /* Where you can move */
+        .can-move {
+            background-color: #55a3ff !important;
+            box-shadow: inset 0 0 0 3px #00b894;
+        }
+
+        /* Pieces you can bomb */
+        .can-bomb {
+            background-color: #ff7675 !important;
+            box-shadow: inset 0 0 0 4px #d63031;
+            animation: pulse 1s infinite;
+        }
+
+        /* Make bomb targets pulse */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Buttons */
+        .button {
+            background: linear-gradient(45deg, #00b894, #00cec9);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+        }
+
+        .skip-button {
+            background: linear-gradient(45deg, #636e72, #2d3436);
+        }
+
+        /* Special message box */
+        .message {
+            background: linear-gradient(45deg, #fd79a8, #e84393);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px auto;
+            max-width: 400px;
+            font-size: 18px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        /* Turn indicator */
+        .turn {
+            font-size: 24px;
+            color: white;
+            margin: 15px 0;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        /* Game instructions */
+        .instructions {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px auto;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <h1>💣 Bomb Chess 💣</h1>
+    
+    <!-- Show who's turn it is and how many bombs they have -->
+    <div class="info-box">
+        <h3>White Player</h3>
+        <div class="bomb-count white-bombs" id="whiteBombs">10 💣</div>
+    </div>
+    
+    <div class="info-box">
+        <h3>Black Player</h3>
+        <div class="bomb-count black-bombs" id="blackBombs">10 💣</div>
+    </div>
+    
+    <div class="turn" id="turnInfo">White's Turn - Make a move!</div>
+    
+    <!-- Special message when bombing -->
+    <div class="message" id="bombMessage" style="display: none;">
+        🎯 You captured a piece! Now click on any enemy piece to BOMB it! 💥
+        <br><br>
+        <button class="button skip-button" onclick="skipBomb()">Skip Bombing</button>
+    </div>
+    
+    <!-- The chess board -->
+    <div class="chess-board" id="board"></div>
+    
+    <!-- Game controls -->
+    <button class="button" onclick="newGame()">🔄 New Game</button>
+    <button class="button" id="computerButton" onclick="toggleComputer()">👤 Playing vs Human</button>
+    
+    <!-- Instructions -->
+    <div class="instructions">
+        <h3>🎮 How to Play:</h3>
+        <p><strong>1.</strong> Move pieces like normal chess by clicking on them</p>
+        <p><strong>2.</strong> When you capture (take) an enemy piece, you get to BOMB any other enemy piece!</p>
+        <p><strong>3.</strong> You start with 10 bombs each</p>
+        <p><strong>4.</strong> Even if the King gets bombed, keep playing!</p>
+        <p><strong>5.</strong> Win by capturing or bombing ALL enemy pieces!</p>
+    </div>
+
+    <script>
+        // This is where we store our game information
+        let currentPlayer = 'white';  // Who's turn is it?
+        let selectedSquare = null;    // Which piece did we click?
+        let gamePhase = 'move';       // Are we moving or bombing?
+        let whiteBombs = 10;          // How many bombs does white have?
+        let blackBombs = 10;          // How many bombs does black have?
+        let isComputerPlayer = false; // Is computer playing?
+        let computerSide = 'black';   // Which side does computer play?
+        
+        // Starting chess board setup
+        let board = [
+            ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],  // Black pieces
+            ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],  // Black pawns
+            [null, null, null, null, null, null, null, null],  // Empty
+            [null, null, null, null, null, null, null, null],  // Empty
+            [null, null, null, null, null, null, null, null],  // Empty
+            [null, null, null, null, null, null, null, null],  // Empty
+            ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],  // White pawns
+            ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']   // White pieces
+        ];
+        
+        // What each piece looks like
+        const pieces = {
+            'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',  // White
+            'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'   // Black
+        };
+        
+        // Check if a piece belongs to white (capital letters = white)
+        function isWhite(piece) {
+            return piece && piece === piece.toUpperCase();
+        }
+        
+        // Draw the chess board on the screen
+        function drawBoard() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';  // Clear the board
+            
+            // Make each square
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const square = document.createElement('button');
+                    square.className = 'square';
+                    
+                    // Make checkerboard pattern
+                    if ((row + col) % 2 === 0) {
+                        square.classList.add('light');
+                    } else {
+                        square.classList.add('dark');
+                    }
+                    
+                    // Put piece on square if there is one
+                    const piece = board[row][col];
+                    if (piece) {
+                        square.textContent = pieces[piece];
+                    }
+                    
+                    // What happens when you click the square
+                    square.onclick = () => clickSquare(row, col);
+                    
+                    // Give each square an ID so we can find it later
+                    square.id = `square-${row}-${col}`;
+                    
+                    boardElement.appendChild(square);
+                }
+            }
+        }
+        
+        // What happens when you click on a square
+        function clickSquare(row, col) {
+            // Don't allow clicks during computer turn
+            if (currentPlayer === computerSide && isComputerPlayer) {
+                return;
+            }
+            
+            if (gamePhase === 'bomb') {
+                // We're in bombing mode!
+                const piece = board[row][col];
+                if (piece && isWhite(piece) !== (currentPlayer === 'white')) {
+                    bombPiece(row, col);
+                }
+                return;
+            }
+            
+            // Normal move mode
+            if (selectedSquare) {
+                // We already selected a piece, try to move it
+                const [fromRow, fromCol] = selectedSquare;
+                if (canMoveTo(fromRow, fromCol, row, col)) {
+                    makeMove(fromRow, fromCol, row, col);
+                } else {
+                    // Click on a different piece to select it
+                    selectPiece(row, col);
+                }
+            } else {
+                // Select a piece
+                selectPiece(row, col);
+            }
+        }
+        
+        // Select a piece to move
+        function selectPiece(row, col) {
+            const piece = board[row][col];
+            
+            // Can only select your own pieces
+            if (piece && isWhite(piece) === (currentPlayer === 'white')) {
+                selectedSquare = [row, col];
+                highlightSquare(row, col, 'selected');
+                showPossibleMoves(row, col);
+            } else {
+                // Deselect everything
+                selectedSquare = null;
+                clearHighlights();
+            }
+        }
+        
+        // Show where a piece can move
+        function showPossibleMoves(row, col) {
+            clearHighlights();
+            highlightSquare(row, col, 'selected');
+            
+            // This is simplified - in a real game you'd check all chess rules
+            // For now, let's just show adjacent squares as an example
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (canMoveTo(row, col, r, c)) {
+                        highlightSquare(r, c, 'can-move');
+                    }
+                }
+            }
+        }
+        
+        // Check if a piece can move to a square (real chess rules!)
+        function canMoveTo(fromRow, fromCol, toRow, toCol) {
+            const piece = board[fromRow][fromCol];
+            const target = board[toRow][toCol];
+            
+            // Can't move to same square
+            if (fromRow === toRow && fromCol === toCol) return false;
+            
+            // Can't capture your own piece
+            if (target && isWhite(target) === isWhite(piece)) return false;
+            
+            // Check movement based on piece type
+            const pieceType = piece.toLowerCase();
+            
+            switch (pieceType) {
+                case 'p': // Pawn
+                    return canPawnMove(fromRow, fromCol, toRow, toCol, piece);
+                case 'r': // Rook
+                    return canRookMove(fromRow, fromCol, toRow, toCol);
+                case 'n': // Knight
+                    return canKnightMove(fromRow, fromCol, toRow, toCol);
+                case 'b': // Bishop
+                    return canBishopMove(fromRow, fromCol, toRow, toCol);
+                case 'q': // Queen
+                    return canQueenMove(fromRow, fromCol, toRow, toCol);
+                case 'k': // King
+                    return canKingMove(fromRow, fromCol, toRow, toCol);
+                default:
+                    return false;
+            }
+        }
+        
+        // Pawn movement rules
+        function canPawnMove(fromRow, fromCol, toRow, toCol, piece) {
+            const isWhitePiece = isWhite(piece);
+            const direction = isWhitePiece ? -1 : 1; // White moves up, black moves down
+            const startRow = isWhitePiece ? 6 : 1;   // Starting row for each color
+            const target = board[toRow][toCol];
+            
+            // Moving forward
+            if (fromCol === toCol && !target) {
+                // One square forward
+                if (toRow === fromRow + direction) return true;
+                // Two squares from starting position
+                if (fromRow === startRow && toRow === fromRow + 2 * direction) return true;
+            }
+            
+            // Capturing diagonally
+            if (Math.abs(fromCol - toCol) === 1 && toRow === fromRow + direction && target) {
+                return true;
+            }
+            
+            return false;
+        }
+        
+        // Rook movement rules (horizontal and vertical lines)
+        function canRookMove(fromRow, fromCol, toRow, toCol) {
+            // Must move in straight line
+            if (fromRow !== toRow && fromCol !== toCol) return false;
+            
+            // Check if path is clear
+            return isPathClear(fromRow, fromCol, toRow, toCol);
+        }
+        
+        // Knight movement rules (L-shape)
+        function canKnightMove(fromRow, fromCol, toRow, toCol) {
+            const rowDiff = Math.abs(fromRow - toRow);
+            const colDiff = Math.abs(fromCol - toCol);
+            
+            // Knight moves in L-shape: 2+1 or 1+2
+            return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
+        }
+        
+        // Bishop movement rules (diagonal lines)
+        function canBishopMove(fromRow, fromCol, toRow, toCol) {
+            const rowDiff = Math.abs(fromRow - toRow);
+            const colDiff = Math.abs(fromCol - toCol);
+            
+            // Must move diagonally
+            if (rowDiff !== colDiff) return false;
+            
+            // Check if path is clear
+            return isPathClear(fromRow, fromCol, toRow, toCol);
+        }
+        
+        // Queen movement rules (combines rook and bishop)
+        function canQueenMove(fromRow, fromCol, toRow, toCol) {
+            return canRookMove(fromRow, fromCol, toRow, toCol) || 
+                   canBishopMove(fromRow, fromCol, toRow, toCol);
+        }
+        
+        // King movement rules (one square in any direction)
+        function canKingMove(fromRow, fromCol, toRow, toCol) {
+            const rowDiff = Math.abs(fromRow - toRow);
+            const colDiff = Math.abs(fromCol - toCol);
+            
+            return rowDiff <= 1 && colDiff <= 1;
+        }
+        
+        // Check if path is clear between two squares
+        function isPathClear(fromRow, fromCol, toRow, toCol) {
+            const rowStep = toRow > fromRow ? 1 : toRow < fromRow ? -1 : 0;
+            const colStep = toCol > fromCol ? 1 : toCol < fromCol ? -1 : 0;
+            
+            let currentRow = fromRow + rowStep;
+            let currentCol = fromCol + colStep;
+            
+            // Check each square in the path (not including start and end)
+            while (currentRow !== toRow || currentCol !== toCol) {
+                if (board[currentRow][currentCol] !== null) {
+                    return false; // Path is blocked
+                }
+                currentRow += rowStep;
+                currentCol += colStep;
+            }
+            
+            return true; // Path is clear
+        }
+        
+        // Move a piece
+        function makeMove(fromRow, fromCol, toRow, toCol) {
+            const piece = board[fromRow][fromCol];
+            const capturedPiece = board[toRow][toCol];
+            
+            // Move the piece
+            board[toRow][toCol] = piece;
+            board[fromRow][fromCol] = null;
+            
+            selectedSquare = null;
+            clearHighlights();
+            drawBoard();
+            
+            if (capturedPiece) {
+                // We captured something! Time to bomb!
+                gamePhase = 'bomb';
+                showBombMessage();
+                highlightBombTargets();
+            } else {
+                // No capture, just switch turns
+                switchTurns();
+            }
+        }
+        
+        // Bomb a piece!
+        function bombPiece(row, col) {
+            board[row][col] = null;  // Remove the piece
+            
+            // Use up a bomb
+            if (currentPlayer === 'white') {
+                whiteBombs--;
+            } else {
+                blackBombs--;
+            }
+            
+            // Update the display
+            updateBombCounts();
+            hideBombMessage();
+            gamePhase = 'move';
+            clearHighlights();
+            drawBoard();
+            switchTurns();
+        }
+        
+        // Skip bombing
+        function skipBomb() {
+            hideBombMessage();
+            gamePhase = 'move';
+            clearHighlights();
+            drawBoard();
+            switchTurns();
+        }
+        
+        // Switch whose turn it is
+        function switchTurns() {
+            currentPlayer = (currentPlayer === 'white') ? 'black' : 'white';
+            updateTurnDisplay();
+            
+            // If it's computer's turn, make computer move after a short delay
+            if (currentPlayer === computerSide && isComputerPlayer) {
+                setTimeout(() => {
+                    if (gamePhase === 'move') {
+                        makeComputerMove();
+                    } else if (gamePhase === 'bomb') {
+                        makeComputerBomb();
+                    }
+                }, 1000); // Wait 1 second so human can see what happened
+            }
+        }
+        
+        // Show which pieces can be bombed
+        function highlightBombTargets() {
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const piece = board[row][col];
+                    if (piece && isWhite(piece) !== (currentPlayer === 'white')) {
+                        highlightSquare(row, col, 'can-bomb');
+                    }
+                }
+            }
+        }
+        
+        // Highlight a square
+        function highlightSquare(row, col, className) {
+            const square = document.getElementById(`square-${row}-${col}`);
+            square.classList.add(className);
+        }
+        
+        // Remove all highlights
+        function clearHighlights() {
+            const squares = document.querySelectorAll('.square');
+            squares.forEach(square => {
+                square.classList.remove('selected', 'can-move', 'can-bomb');
+            });
+        }
+        
+        // Show bomb message
+        function showBombMessage() {
+            document.getElementById('bombMessage').style.display = 'block';
+        }
+        
+        // Hide bomb message
+        function hideBombMessage() {
+            document.getElementById('bombMessage').style.display = 'none';
+        }
+        
+        // Update bomb counters
+        function updateBombCounts() {
+            document.getElementById('whiteBombs').textContent = `${whiteBombs} 💣`;
+            document.getElementById('blackBombs').textContent = `${blackBombs} 💣`;
+        }
+        
+        // Update whose turn it is
+        function updateTurnDisplay() {
+            const turnInfo = document.getElementById('turnInfo');
+            if (gamePhase === 'bomb') {
+                if (currentPlayer === computerSide && isComputerPlayer) {
+                    turnInfo.textContent = "Computer is choosing what to bomb...";
+                } else {
+                    turnInfo.textContent = "💥 Choose a piece to bomb!";
+                }
+            } else {
+                if (currentPlayer === computerSide && isComputerPlayer) {
+                    turnInfo.textContent = "Computer is thinking...";
+                } else if (currentPlayer === 'white') {
+                    turnInfo.textContent = "White's Turn - Make a move!";
+                } else {
+                    turnInfo.textContent = "Black's Turn - Make a move!";
+                }
+            }
+        }
+        
+        // Start a new game
+        function newGame() {
+            // Reset everything
+            currentPlayer = 'white';
+            selectedSquare = null;
+            gamePhase = 'move';
+            whiteBombs = 10;
+            blackBombs = 10;
+            
+            // Reset the board
+            board = [
+                ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+                ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+                [null, null, null, null, null, null, null, null],
+                [null, null, null, null, null, null, null, null],
+                [null, null, null, null, null, null, null, null],
+                [null, null, null, null, null, null, null, null],
+                ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+                ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+            ];
+            
+            // Update everything on screen
+            hideBombMessage();
+            updateBombCounts();
+            updateTurnDisplay();
+            clearHighlights();
+            drawBoard();
+            
+            // If computer plays white, make first move
+            if (currentPlayer === computerSide && isComputerPlayer) {
+                setTimeout(makeComputerMove, 1000);
+            }
+        }
+        
+        // Toggle computer player
+        function toggleComputer() {
+            isComputerPlayer = !isComputerPlayer;
+            const button = document.getElementById('computerButton');
+            if (isComputerPlayer) {
+                button.textContent = '🤖 Playing vs Computer';
+                button.style.background = 'linear-gradient(45deg, #e17055, #d63031)';
+                
+                // If it's computer's turn, make a move
+                if (currentPlayer === computerSide) {
+                    setTimeout(() => {
+                        if (gamePhase === 'move') {
+                            makeComputerMove();
+                        } else if (gamePhase === 'bomb') {
+                            makeComputerBomb();
+                        }
+                    }, 1000);
+                }
+            } else {
+                button.textContent = '👤 Playing vs Human';
+                button.style.background = 'linear-gradient(45deg, #00b894, #00cec9)';
+            }
+            updateTurnDisplay();
+        }
+        
+        // Get all possible moves for a piece
+        function getAllMoves(row, col) {
+            const moves = [];
+            for (let toRow = 0; toRow < 8; toRow++) {
+                for (let toCol = 0; toCol < 8; toCol++) {
+                    if (canMoveTo(row, col, toRow, toCol)) {
+                        moves.push([toRow, toCol]);
+                    }
+                }
+            }
+            return moves;
+        }
+        
+        // Get all possible moves for current player
+        function getAllPlayerMoves(player) {
+            const allMoves = [];
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const piece = board[row][col];
+                    if (piece && isWhite(piece) === (player === 'white')) {
+                        const moves = getAllMoves(row, col);
+                        for (const [toRow, toCol] of moves) {
+                            allMoves.push({
+                                from: [row, col],
+                                to: [toRow, toCol],
+                                piece: piece,
+                                captures: board[toRow][toCol]
+                            });
+                        }
+                    }
+                }
+            }
+            return allMoves;
+        }
+        
+        // Smart evaluation that understands bombing
+        function evaluateMove(move) {
+            const pieceValues = { 'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 100 };
+            let score = 0;
+            
+            // Basic capture value
+            if (move.captures) {
+                score += pieceValues[move.captures.toLowerCase()] || 0;
+            }
+            
+            // BOMB BONUS: If this capture gives us bombing opportunity
+            if (move.captures && (computerSide === 'white' ? whiteBombs : blackBombs) > 0) {
+                // Find the most valuable enemy piece we could bomb
+                let bestBombTarget = 0;
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = board[row][col];
+                        if (piece && isWhite(piece) !== (computerSide === 'white')) {
+                            // Skip the piece we're already capturing
+                            if (row === move.to[0] && col === move.to[1]) continue;
+                            
+                            const value = pieceValues[piece.toLowerCase()] || 0;
+                            bestBombTarget = Math.max(bestBombTarget, value);
+                        }
+                    }
+                }
+                // Add bomb bonus - capturing is worth the capture PLUS the bomb!
+                score += bestBombTarget * 0.8; // Slightly less than full value since it costs a bomb
+            }
+            
+            // DEFENSIVE: Avoid moves that put valuable pieces in danger
+            const [toRow, toCol] = move.to;
+            const movingPieceValue = pieceValues[move.piece.toLowerCase()] || 0;
+            
+            // Check if the destination square is attacked by enemy
+            if (isSquareAttackedByEnemy(toRow, toCol, computerSide)) {
+                score -= movingPieceValue * 0.5; // Penalty for moving into danger
+            }
+            
+            // AGGRESSIVE: Prefer moves that attack enemy pieces
+            let attackBonus = 0;
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    if (wouldAttackSquareAfterMove(move, row, col)) {
+                        const piece = board[row][col];
+                        if (piece && isWhite(piece) !== (computerSide === 'white')) {
+                            attackBonus += (pieceValues[piece.toLowerCase()] || 0) * 0.1;
+                        }
+                    }
+                }
+            }
+            score += attackBonus;
+            
+            return score;
+        }
+        
+        // Check if a square is attacked by the enemy
+        function isSquareAttackedByEnemy(row, col, friendlySide) {
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const piece = board[r][c];
+                    if (piece && isWhite(piece) !== (friendlySide === 'white')) {
+                        if (canMoveTo(r, c, row, col)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        
+        // Check if a move would attack a square
+        function wouldAttackSquareAfterMove(move, targetRow, targetCol) {
+            // Simulate the move
+            const originalBoard = board.map(row => [...row]);
+            const [fromRow, fromCol] = move.from;
+            const [toRow, toCol] = move.to;
+            
+            board[toRow][toCol] = board[fromRow][fromCol];
+            board[fromRow][fromCol] = null;
+            
+            const attacks = canMoveTo(toRow, toCol, targetRow, targetCol);
+            
+            // Restore board
+            board = originalBoard;
+            
+            return attacks;
+        }
+        
+        // Computer makes a smart move that understands bombs!
+        function makeComputerMove() {
+            const possibleMoves = getAllPlayerMoves(computerSide);
+            
+            if (possibleMoves.length === 0) {
+                alert('Computer has no moves! You win!');
+                return;
+            }
+            
+            // Evaluate every possible move
+            const evaluatedMoves = possibleMoves.map(move => ({
+                ...move,
+                score: evaluateMove(move)
+            }));
+            
+            // Sort by score (best first)
+            evaluatedMoves.sort((a, b) => b.score - a.score);
+            
+            // SMART STRATEGY: Choose from top 3 moves to add some variety
+            const topMoves = evaluatedMoves.slice(0, Math.min(3, evaluatedMoves.length));
+            const chosenMove = topMoves[Math.floor(Math.random() * topMoves.length)];
+            
+            const [fromRow, fromCol] = chosenMove.from;
+            const [toRow, toCol] = chosenMove.to;
+            
+            // Show what computer is thinking
+            console.log(`Computer evaluating: ${possibleMoves.length} moves`);
+            console.log(`Best move score: ${chosenMove.score.toFixed(1)}`);
+            console.log(`Move: ${pieces[chosenMove.piece]} ${String.fromCharCode(97 + fromCol)}${8 - fromRow} → ${String.fromCharCode(97 + toCol)}${8 - toRow}`);
+            
+            // Highlight the move briefly
+            highlightSquare(fromRow, fromCol, 'selected');
+            setTimeout(() => {
+                highlightSquare(toRow, toCol, 'can-move');
+                setTimeout(() => {
+                    makeMove(fromRow, fromCol, toRow, toCol);
+                }, 500);
+            }, 500);
+        }
+        
+        // Computer chooses what to bomb STRATEGICALLY
+        function makeComputerBomb() {
+            const bombTargets = [];
+            
+            // Find all enemy pieces that can be bombed
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const piece = board[row][col];
+                    if (piece && isWhite(piece) !== (computerSide === 'white')) {
+                        bombTargets.push({ row, col, piece });
+                    }
+                }
+            }
+            
+            const computerBombs = computerSide === 'white' ? whiteBombs : blackBombs;
+            
+            if (bombTargets.length === 0 || computerBombs === 0) {
+                skipBomb();
+                return;
+            }
+            
+            // STRATEGIC BOMBING: Consider multiple factors
+            const pieceValues = { 'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 100 };
+            
+            const evaluatedTargets = bombTargets.map(target => {
+                let score = pieceValues[target.piece.toLowerCase()] || 0;
+                
+                // BONUS: Bomb pieces that are well-defended (hard to capture normally)
+                let defenders = 0;
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const defender = board[r][c];
+                        if (defender && isWhite(defender) === isWhite(target.piece) && 
+                            canMoveTo(r, c, target.row, target.col)) {
+                            defenders++;
+                        }
+                    }
+                }
+                if (defenders > 1) score += 1; // Bonus for bombing well-defended pieces
+                
+                // BONUS: Bomb pieces that are attacking our valuable pieces
+                let threatBonus = 0;
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const ourPiece = board[r][c];
+                        if (ourPiece && isWhite(ourPiece) === (computerSide === 'white')) {
+                            if (canMoveTo(target.row, target.col, r, c)) {
+                                threatBonus += (pieceValues[ourPiece.toLowerCase()] || 0) * 0.3;
+                            }
+                        }
+                    }
+                }
+                score += threatBonus;
+                
+                // STRATEGIC: Save bombs if we're low and target isn't that valuable
+                if (computerBombs <= 3 && score < 3) {
+                    score -= 2; // Penalty for wasting bombs on weak pieces
+                }
+                
+                // POSITIONAL: Prefer bombing pieces in strong positions (center, advanced pawns)
+                if (target.piece.toLowerCase() === 'p') {
+                    const advancementBonus = isWhite(target.piece) ? (6 - target.row) : (target.row - 1);
+                    score += advancementBonus * 0.2; // Bomb advanced pawns
+                }
+                
+                // Center control bonus
+                if (target.row >= 3 && target.row <= 4 && target.col >= 3 && target.col <= 4) {
+                    score += 0.5;
+                }
+                
+                return { ...target, score };
+            });
+            
+            // Sort by strategic value
+            evaluatedTargets.sort((a, b) => b.score - a.score);
+            
+            console.log('Bomb targets evaluated:');
+            evaluatedTargets.forEach(target => {
+                console.log(`${pieces[target.piece]} at ${String.fromCharCode(97 + target.col)}${8 - target.row}: ${target.score.toFixed(1)} points`);
+            });
+            
+            // Choose best target, with some randomness if scores are close
+            let chosenTarget;
+            if (evaluatedTargets.length > 1 && evaluatedTargets[0].score - evaluatedTargets[1].score < 0.5) {
+                // If top 2 targets are close in value, randomly pick between them
+                chosenTarget = evaluatedTargets[Math.floor(Math.random() * 2)];
+            } else {
+                chosenTarget = evaluatedTargets[0];
+            }
+            
+            // BOMB CONSERVATION: Sometimes skip bombing weak pieces if low on bombs
+            if (computerBombs <= 2 && chosenTarget.score < 2.5) {
+                console.log('Computer conserving bombs - skipping weak target');
+                skipBomb();
+                return;
+            }
+            
+            console.log(`Computer bombing: ${pieces[chosenTarget.piece]} (value: ${chosenTarget.score.toFixed(1)})`);
+            
+            // Highlight target briefly then bomb
+            highlightSquare(chosenTarget.row, chosenTarget.col, 'can-bomb');
+            setTimeout(() => {
+                bombPiece(chosenTarget.row, chosenTarget.col);
+            }, 1000);
+        }
+        
+        // Start the game when the page loads
+        drawBoard();
+        updateBombCounts();
+        updateTurnDisplay();
+    </script>
+</body>
+</html>
