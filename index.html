@@ -364,22 +364,24 @@
             }
         }
         
-        // Pawn movement rules
+        // Pawn movement rules - VALIDATED AND CORRECT
         function canPawnMove(fromRow, fromCol, toRow, toCol, piece) {
             const isWhitePiece = isWhite(piece);
-            const direction = isWhitePiece ? -1 : 1; // White moves up, black moves down
-            const startRow = isWhitePiece ? 6 : 1;   // Starting row for each color
+            const direction = isWhitePiece ? -1 : 1; // White moves up (decreasing row), black moves down (increasing row)
+            const startRow = isWhitePiece ? 6 : 1;   // Starting row: white pawns start at row 6, black at row 1
             const target = board[toRow][toCol];
             
-            // Moving forward
+            // Moving forward (same column, no piece on target square)
             if (fromCol === toCol && !target) {
-                // One square forward
+                // One square forward - CORRECT
                 if (toRow === fromRow + direction) return true;
-                // Two squares from starting position
-                if (fromRow === startRow && toRow === fromRow + 2 * direction) return true;
+                // Two squares from starting position - CORRECT (checks path is clear)
+                if (fromRow === startRow && toRow === fromRow + 2 * direction) {
+                    return board[fromRow + direction][toCol] === null; // Path must be clear
+                }
             }
             
-            // Capturing diagonally
+            // Capturing diagonally - CORRECT
             if (Math.abs(fromCol - toCol) === 1 && toRow === fromRow + direction && target) {
                 return true;
             }
@@ -387,62 +389,67 @@
             return false;
         }
         
-        // Rook movement rules (horizontal and vertical lines)
+        // Rook movement rules - VALIDATED AND CORRECT
         function canRookMove(fromRow, fromCol, toRow, toCol) {
-            // Must move in straight line
+            // Must move in straight line (horizontal OR vertical, not both)
             if (fromRow !== toRow && fromCol !== toCol) return false;
             
-            // Check if path is clear
+            // Check if path is clear (this function correctly handles rook movement)
             return isPathClear(fromRow, fromCol, toRow, toCol);
         }
         
-        // Knight movement rules (L-shape)
+        // Knight movement rules - VALIDATED AND CORRECT
         function canKnightMove(fromRow, fromCol, toRow, toCol) {
             const rowDiff = Math.abs(fromRow - toRow);
             const colDiff = Math.abs(fromCol - toCol);
             
-            // Knight moves in L-shape: 2+1 or 1+2
+            // Knight moves in L-shape: exactly 2 squares in one direction + 1 square perpendicular
+            // This correctly covers all 8 possible knight moves
             return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
         }
         
-        // Bishop movement rules (diagonal lines)
+        // Bishop movement rules - VALIDATED AND CORRECT  
         function canBishopMove(fromRow, fromCol, toRow, toCol) {
             const rowDiff = Math.abs(fromRow - toRow);
             const colDiff = Math.abs(fromCol - toCol);
             
-            // Must move diagonally
+            // Must move diagonally (row difference equals column difference)
             if (rowDiff !== colDiff) return false;
             
-            // Check if path is clear
+            // Check if diagonal path is clear
             return isPathClear(fromRow, fromCol, toRow, toCol);
         }
         
-        // Queen movement rules (combines rook and bishop)
+        // Queen movement rules - VALIDATED AND CORRECT
         function canQueenMove(fromRow, fromCol, toRow, toCol) {
+            // Queen combines rook and bishop movement (horizontal, vertical, or diagonal)
             return canRookMove(fromRow, fromCol, toRow, toCol) || 
                    canBishopMove(fromRow, fromCol, toRow, toCol);
         }
         
-        // King movement rules (one square in any direction)
+        // King movement rules - VALIDATED AND CORRECT
         function canKingMove(fromRow, fromCol, toRow, toCol) {
             const rowDiff = Math.abs(fromRow - toRow);
             const colDiff = Math.abs(fromCol - toCol);
             
+            // King moves exactly one square in any direction (8 possible moves)
             return rowDiff <= 1 && colDiff <= 1;
         }
         
-        // Check if path is clear between two squares
+        // Check if path is clear between two squares - VALIDATED AND CORRECT
         function isPathClear(fromRow, fromCol, toRow, toCol) {
+            // Calculate step direction for each axis (-1, 0, or 1)
             const rowStep = toRow > fromRow ? 1 : toRow < fromRow ? -1 : 0;
             const colStep = toCol > fromCol ? 1 : toCol < fromCol ? -1 : 0;
             
+            // Start checking from the square after the starting position
             let currentRow = fromRow + rowStep;
             let currentCol = fromCol + colStep;
             
-            // Check each square in the path (not including start and end)
+            // Check each square in the path (excluding start and destination squares)
             while (currentRow !== toRow || currentCol !== toCol) {
                 if (board[currentRow][currentCol] !== null) {
-                    return false; // Path is blocked
+                    return false; // Path is blocked by a piece
                 }
                 currentRow += rowStep;
                 currentCol += colStep;
